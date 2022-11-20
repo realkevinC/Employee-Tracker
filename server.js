@@ -40,7 +40,7 @@ const welcomePage = () =>{
             // "View Employees by Department",
             "Add Employee",
             // "Remove Employees",
-            "Update Employee Role",
+            "Update Employee",
             // "Update Employee Managers",
             "View Role",
             "Add Role",
@@ -56,20 +56,14 @@ const welcomePage = () =>{
         case "View Employees":
           viewEmployee();
           break;
-        // case "View Employee by Manager":
-        //   viewEmployeeManager();
-        //   break;
-        // case "View Employees by Department":
-        //   viewEmployeeDepartment();
-        //   break;
         case "Add Employee":
           addEmployee();
           break;
         // case "Remove Employees":
         //   removeEmployee();
         //   break;
-        case "Update Employee Role":
-          updateEmployeeRole();
+        case "Update Employee":
+          updateEmployee();
           break;
         case "View Role":
           viewRole();
@@ -118,16 +112,16 @@ const viewEmployee = () => {
 
 const viewRole = () => {
   connection.query(`SELECT * FROM roles`, 
-  function (err, results) {
-    console.table(results);
+  function (err, result) {
+    console.table(result);
     welcomePage();
 })
 }
 
 const viewDepartment = () => {
   connection.query(`SELECT * FROM departments`, 
-  function (err, results) {
-    console.table(results);
+  function (err, result) {
+    console.table(result);
     welcomePage();
 })
 }
@@ -138,14 +132,14 @@ const addEmployee = () => {
   connection.query(
     `SELECT roles.id, roles.title, roles.salary 
       FROM roles`, 
-    function (err, res) {
+    function (err, result) {
     if (err) throw err;
 
-    const roleChoices = res.map(({ id, title, salary }) => ({
+    const roleChoices = result.map(({ id, title, salary }) => ({
       value: id, title: `${title}`, salary: `${salary}`
     }));
 
-    console.table(res);
+    console.table(result);
     console.log("Role Insert.");
     addEmployeePrompt(roleChoices);
   });
@@ -184,10 +178,10 @@ const addEmployeePrompt = (roleChoices) => {
           role_id: answer.role_id,
           manager_id: answer.manager_id,
         },  
-        function (err, res) {
+        function (err, result) {
           if (err) throw err;
 
-          console.table(res);
+          console.table(result);
           console.log("Added employee");
 
           welcomePage();
@@ -205,14 +199,14 @@ const addRole = () => {
     JOIN departments
     ON roles.department_id = departments.id`,
      
-    function (err, res) {
+    function (err, result) {
       if (err) throw err;
   
-      const departmentChoices = res.map(({ id, name }) => ({
+      const departmentChoices = result.map(({ id, name }) => ({
         value: id, name: `${id} ${name}`
       }));
   
-      console.table(res);
+      console.table(result);
       console.log("Department List");
   
       addRolePrompt(departmentChoices);
@@ -247,10 +241,10 @@ const addRolePrompt = (departmentChoices) => {
         salary: answer.salary,
         department_id: answer.department_id
       },
-        function (err, res) {
+        function (err, result) {
           if (err) throw err;
 
-          console.table(res);
+          console.table(result);
           console.log("Role Added.");
 
           welcomePage();
@@ -275,10 +269,10 @@ connection.query
       {
         name: answer.department_name
       },
-      function (err, res) {
+      function (err, result) {
         if (err) throw err;
 
-        console.table(res);
+        console.table(result);
         console.log("Department Added.");
 
         welcomePage();
@@ -286,9 +280,67 @@ connection.query
     });
 }
 
+const updateEmployee = () => {
+  console.log("Update employee info")
 
+  connection.query
+  (`SELECT e.id, e.first_name, e.last_name, r.title, d.name, r.salary, CONCAT(m.first_name,' ',m.last_name) AS manager
+  FROM employees e
+  LEFT JOIN roles r ON e.role_id = r.id
+  LEFT JOIN departments d ON d.id = r.department_id
+  LEFT JOIN employees m ON m.id = e.manager_id`,
+  function (err, result){
+    const selectEmployee = result.map(({ id, first_name, last_name }) => ({
+      value: id, name: `${first_name} ${last_name}`      
+    }))
+    console.table(result);
+    newRole(selectEmployee)
+  })
+}
 
+const newRole = (selectEmployee) => {
+  connection.query(
+    `SELECT roles.id, roles.title, roles.salary 
+      FROM roles`,
+  function (err, result){
+    let roleChoices= result.map(({ id, title, salary }) => ({
+      value: id, title: `${title}`, salary: `${salary}`      
+    }));
+    console.table(result)
 
+    updateEmployeePrompt(selectEmployee, roleChoices)
+  })
+}
+
+const updateEmployeePrompt = (selectEmployee, roleChoices) => {
+  inquirer
+  .prompt([
+    {
+      type: 'list',
+      name: 'employee_id',
+      message: 'Select an employee',
+      choices: selectEmployee
+    },
+    {
+      type: 'list',
+      name: 'role_id',
+      message: 'Role update list',
+      choices: roleChoices
+    }
+  ])
+  .then(function (answer) {
+    connection.query(`UPDATE employee SET role_id = ?`,
+    [
+      answer.employee_id,
+      answer.role_id
+    ],
+    function (err, result){
+      console.table(result)
+
+      welcomePage()
+    })
+  })  
+}
 
 
 
