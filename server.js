@@ -37,7 +37,7 @@ const welcomePage = () =>{
         choices: [
             "View Employees",
             // "View Employee by Manager",
-            "View Employees by Department",
+            // "View Employees by Department",
             "Add Employee",
             // "Remove Employees",
             "Update Employee Role",
@@ -100,11 +100,11 @@ const viewEmployee = () => {
   console.log("Viewing Employees")
 
   connection.query(
-  `SELECT employees.id, employees.first_name, employees.last_name, roles.title, departments.name, roles.salary, CONCAT(employees.first_name,' ',employees.last_name) AS manager
-  FROM employees
-  LEFT JOIN roles ON employees.role_id = roles.id
-  LEFT JOIN departments ON departments.id = roles.department_id
-  LEFT JOIN employees ON employees.id = employees.manager_id`),
+  `SELECT e.id, e.first_name, e.last_name, r.title, d.name, r.salary, CONCAT(m.first_name,' ',m.last_name) AS manager
+  FROM employees e
+  LEFT JOIN roles r ON e.role_id = r.id
+  LEFT JOIN departments d ON d.id = r.department_id
+  LEFT JOIN employees m ON m.id = e.manager_id`,
   function (err, result) {
     if (err) 
     throw err;
@@ -113,7 +113,7 @@ const viewEmployee = () => {
     console.log("Employees viewed.");
 
     welcomePage();
-  };
+  });
 }
 
 const viewRole = () => {
@@ -135,10 +135,10 @@ const viewDepartment = () => {
 const addEmployee = () => {
   console.log("Adding Employee")
 
-  let query =
-  `SELECT roles.id, roles.title, roles.salary 
-    FROM role`
-  connection.query(query, function (err, res) {
+  connection.query(
+    `SELECT roles.id, roles.title, roles.salary 
+      FROM roles`, 
+    function (err, res) {
     if (err) throw err;
 
     const roleChoices = res.map(({ id, title, salary }) => ({
@@ -177,8 +177,7 @@ const addEmployeePrompt = (roleChoices) => {
       }  
     ])  
     .then(function (answer) {
-      let query = `INSERT INTO employees SET`
-      connection.query(query,
+      connection.query(`INSERT INTO employees SET ?`,
         {
           first_name: answer.first_name,
           last_name: answer.last_name,
@@ -198,15 +197,15 @@ const addEmployeePrompt = (roleChoices) => {
 
 const addRole = () => {
   console.log("Adding Role")
-  let query = 
-  `SELECT departments.id, departments.name, roles.salary
+    connection.query
+    (`SELECT departments.id, departments.name, roles.salary
     FROM employees
     JOIN roles
     ON employees.role_id = roles.id
     JOIN departments
-    ON roles.department_id = departments.id`
-
-    connection.query(query, function (err, res) {
+    ON roles.department_id = departments.id`,
+     
+    function (err, res) {
       if (err) throw err;
   
       const departmentChoices = res.map(({ id, name }) => ({
@@ -242,10 +241,8 @@ const addRolePrompt = (departmentChoices) => {
     ])
 
     .then(function (answer) {
-
-      let query = `INSERT INTO roles SET`
-
-      connection.query(query, {
+      connection.query(`INSERT INTO roles SET ?`,
+      {
         title: answer.title,
         salary: answer.salary,
         department_id: answer.department_id
@@ -256,12 +253,14 @@ const addRolePrompt = (departmentChoices) => {
           console.table(res);
           console.log("Role Added.");
 
-          firstPrompt();
+          welcomePage();
         });
 
     });
 }
 const addDepartment = () => {
+console.log("Adding Department")
+connection.query
 
     inquirer
     .prompt([
@@ -272,10 +271,9 @@ const addDepartment = () => {
     }
     ])
     .then(function (answer) {
-
-      let query = `INSERT INTO departments SET`
-      connection.query( query, {
-        name: answer.name
+      connection.query(`INSERT INTO departments SET ?`,
+      {
+        name: answer.department_name
       },
       function (err, res) {
         if (err) throw err;
@@ -283,7 +281,7 @@ const addDepartment = () => {
         console.table(res);
         console.log("Department Added.");
 
-        firstPrompt();
+        welcomePage();
       })
     });
 }
